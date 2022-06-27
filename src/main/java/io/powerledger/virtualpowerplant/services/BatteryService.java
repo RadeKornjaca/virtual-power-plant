@@ -20,20 +20,18 @@ public class BatteryService {
     }
     
     public List<Battery> batteriesInPostcodeRange(int fromPostcode, int toPostcode) {
-        final List<Battery> batteries = batteryRepository.findByPostcodeBetweenOrderByNameAsc(fromPostcode, toPostcode);
-
-        return batteries;
+        return batteryRepository.findByPostcodeBetweenOrderByNameAsc(fromPostcode, toPostcode);
     }
 
     public double totalCapacity(List<Battery> batteries) {
         return batteries.stream()
-                        .map(battery -> battery.getWattCapacity())
+                        .map(Battery::getWattCapacity)
                         .reduce(0.0, Double::sum);
     }
 
     public double averageCapacity(List<Battery> batteries) {
         return batteries.stream()
-                .map(battery -> battery.getWattCapacity())
+                .map(Battery::getWattCapacity)
                 .collect(Collectors.summarizingDouble(Double::doubleValue))
                 .getAverage();
     }

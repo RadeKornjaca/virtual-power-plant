@@ -48,9 +48,7 @@ public class BatteryController {
         final double totalCapacity = batteryService.totalCapacity(batteries);
         final double avgCapacity = batteryService.averageCapacity(batteries);
 
-        var batteriesInRange = new BatteriesInRangeDTO(batteries, totalCapacity, avgCapacity);
-
-        return batteriesInRange;
+        return new BatteriesInRangeDTO(batteries, totalCapacity, avgCapacity);
     }
 
 }
