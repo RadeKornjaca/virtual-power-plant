@@ -5,10 +5,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.modelmapper.ModelMapper;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
@@ -19,6 +22,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.powerledger.virtualpowerplant.dto.BatteryDto;
 import io.powerledger.virtualpowerplant.entites.Battery;
 import io.powerledger.virtualpowerplant.services.BatteryService;
 
@@ -30,6 +34,9 @@ class BatteryControllerTest {
     
     @Autowired
     ObjectMapper mapper;
+    
+    @Autowired
+    ModelMapper modelMapper;
     
     @MockBean
     BatteryService batteryService;
@@ -64,11 +71,8 @@ class BatteryControllerTest {
         int fromPostcode = 21000;
         int toPostcode = 23000;;
 
-        List<Battery> batteries = new ArrayList<Battery>();
-        batteries.add(battery1);
-        batteries.add(battery2);
-        batteries.add(battery3);
-
+        List<Battery> batteries = Arrays.asList(battery1, battery2, battery3);
+        
         Mockito.when(batteryService.batteriesInPostcodeRange(fromPostcode, toPostcode)).thenReturn(batteries);
         Mockito.when(batteryService.totalCapacity(batteries)).thenReturn(1800.0);
         Mockito.when(batteryService.averageCapacity(batteries)).thenReturn(600.0);
@@ -82,15 +86,12 @@ class BatteryControllerTest {
         mockMvc.perform(mockRequest)
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.batteries", hasSize(3)))
-                .andExpect(jsonPath("$.batteries[0].id").exists())
                 .andExpect(jsonPath("$.batteries[0].name").exists())
                 .andExpect(jsonPath("$.batteries[0].postcode").exists())
                 .andExpect(jsonPath("$.batteries[0].wattCapacity").exists())
-                .andExpect(jsonPath("$.batteries[1].id").exists())
                 .andExpect(jsonPath("$.batteries[1].name").exists())
                 .andExpect(jsonPath("$.batteries[1].postcode").exists())
                 .andExpect(jsonPath("$.batteries[1].wattCapacity").exists())
-                .andExpect(jsonPath("$.batteries[2].id").exists())
                 .andExpect(jsonPath("$.batteries[2].name").exists())
                 .andExpect(jsonPath("$.batteries[2].postcode").exists())
                 .andExpect(jsonPath("$.batteries[2].wattCapacity").exists())
@@ -117,6 +118,7 @@ class BatteryControllerTest {
                 .contentType(MediaType.APPLICATION_JSON);
 
         mockMvc.perform(mockRequest)
+                .andExpect(jsonPath("$.batteries").isEmpty())
                 .andExpect(jsonPath("$.totalCapacity").value(0.0))
                 .andExpect(jsonPath("$.avgCapacity").value(0.0))
                 .andReturn();
@@ -124,19 +126,40 @@ class BatteryControllerTest {
     
     @Test
     void addBatteries_success() throws Exception {
-        List<Battery> batteries = new ArrayList<Battery>();
-        batteries.add(battery1);
-        batteries.add(battery2);
-        batteries.add(battery3);
-        batteries.add(battery4);
+        List<Battery> batteries = Arrays.asList(battery1, battery2, battery3, battery4);
+        List<Battery> batteriesWithNullIds = batteries.stream().map(battery -> Battery.builder()
+                                                                                      .id(null)
+                                                                                      .name(battery.getName())
+                                                                                      .postcode(battery.getPostcode())
+                                                                                      .wattCapacity(battery.getWattCapacity())
+                                                                                      .build())
+                                                                .collect(Collectors.toList());
+        List<BatteryDto> batteriesDto = batteries.stream()
+                                                 .map(battery -> modelMapper.map(battery, BatteryDto.class))
+                                                 .collect(Collectors.toList());
+        
+        Mockito.when(batteryService.saveAll(batteriesWithNullIds)).thenReturn(batteries);
 
         MockHttpServletRequestBuilder mockRequest = MockMvcRequestBuilders.post("/batteries")
                 .contentType(MediaType.APPLICATION_JSON)
                 .accept(MediaType.APPLICATION_JSON)
-                .content(this.mapper.writeValueAsString(batteries));
+                .content(this.mapper.writeValueAsString(batteriesDto));
         
         mockMvc.perform(mockRequest)
                .andExpect(status().isCreated())
-               .andExpect(jsonPath("$").doesNotExist());        
+               .andExpect(jsonPath("$", hasSize(4)))
+               .andExpect(jsonPath("$[0].name").exists())
+               .andExpect(jsonPath("$[0].postcode").exists())
+               .andExpect(jsonPath("$[0].wattCapacity").exists())
+               .andExpect(jsonPath("$[1].name").exists())
+               .andExpect(jsonPath("$[1].postcode").exists())
+               .andExpect(jsonPath("$[1].wattCapacity").exists())
+               .andExpect(jsonPath("$[2].name").exists())
+               .andExpect(jsonPath("$[2].postcode").exists())
+               .andExpect(jsonPath("$[2].wattCapacity").exists())
+               .andExpect(jsonPath("$[3].name").exists())
+               .andExpect(jsonPath("$[3].postcode").exists())
+               .andExpect(jsonPath("$[3].wattCapacity").exists())
+               .andReturn();
     }
 }

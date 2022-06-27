@@ -15,8 +15,8 @@ public class BatteryService {
 
     private BatteryRepository batteryRepository;
     
-    public void saveAll(List<Battery> batteries) {
-        batteryRepository.saveAll(batteries);
+    public List<Battery> saveAll(List<Battery> batteries) {
+        return batteryRepository.saveAll(batteries);
     }
     
     public List<Battery> batteriesInPostcodeRange(int fromPostcode, int toPostcode) {

@@ -30,13 +30,17 @@ public class BatteryController {
     
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @ResponseBody
-    public void addBatteriesEndpoint(@RequestBody List<BatteryDto> batteryListDto) {
+    public @ResponseBody List<BatteryDto> addBatteriesEndpoint(@RequestBody List<BatteryDto> batteryListDto) {
         final List<Battery> batteryList = batteryListDto.stream()
                 .map(batteryDto -> modelMapper.map(batteryDto, Battery.class))
                 .collect(Collectors.toList());
 
-        batteryService.saveAll(batteryList);
+        final List<Battery> savedBatteries = batteryService.saveAll(batteryList);
+        final List<BatteryDto> savedBatteriesDto = savedBatteries.stream()
+                                                        .map(battery -> modelMapper.map(battery, BatteryDto.class))
+                                                        .collect(Collectors.toList());
+        
+        return savedBatteriesDto;
     }
     
     @GetMapping
@@ -44,11 +48,14 @@ public class BatteryController {
             @RequestParam int fromPostcode,
             @RequestParam int toPostcode) {
         final List<Battery> batteries = batteryService.batteriesInPostcodeRange(fromPostcode, toPostcode);
+        final List<BatteryDto> batteriesDto = batteries.stream()
+                                                        .map(battery -> modelMapper.map(battery, BatteryDto.class))
+                                                        .collect(Collectors.toList());               
 
         final double totalCapacity = batteryService.totalCapacity(batteries);
         final double avgCapacity = batteryService.averageCapacity(batteries);
 
-        return new BatteriesInRangeDTO(batteries, totalCapacity, avgCapacity);
+        return new BatteriesInRangeDTO(batteriesDto, totalCapacity, avgCapacity);
     }
 
 }
